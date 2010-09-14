@@ -5,3 +5,14 @@ messagesを洗う
 ホワイトリストと比較
 問題なければdeny.listに追加
 追加した内容をメール
+
+ホワイトリストを読み込む
+messagesを開く
+疑わしいアドレスをリストアップ
+@whitelist.include?()
+WLに入っているか？
+入っていない場合、@blacklistに追加
+
+@blacklist.empty?
+deny.listを読み込む
+ソートして上書き

@@ -8,13 +8,18 @@ def logger(*args)
 end
 
 def logparser(*logs)
+  @addresses = Hash.new(0)
   logs.map{|log| log.split(/\n/)}.flatten.each do |line|
     line.chomp!
     if @regexp_line.match(line)
       line.ip_scan.each do |addr|
-        @icewall.deny(addr)
-        @denyaddr << addr
+        @addresses[addr] += 1
       end
+    end
+  end
+  @addresses.each do |addr, num|
+    if num >= @count
+      @denyaddr << addr
     end
   end
 end
@@ -28,16 +33,18 @@ end
 @denyaddr = []
 @allowaddr = []
 @logfiles = []
+@count = 1
 
 opt = OptionParser.new
 
 opt.on('-d DENY_ADDRESSES') {|var| @denyaddr << var }
 opt.on('-a ALLOW_ADDRESSES') {|var| @allowaddr << var }
-opt.on('-r') { @remove = true }
 opt.on('-b BLACKLIST') {|var| @blacklist_file = var }
 opt.on('-w WHITELST') {|var| @whitelist_file = var }
 opt.on('-m LOGFILE') {|var| @logfiles << var }
 opt.on('-p PATTERN') {|var| @pattern = var.sub(/^\//,'').sub(/\/$/,'') }
+opt.on('-c COUNT') {|var| @count = var.to_i if var.to_i > 0}
+opt.on('-r') { @remove = true }
 opt.on('-s') { @stdin = true }
 opt.on('-n') { @no_save = true }
 opt.on('-q') { @quiet = true }
@@ -51,24 +58,18 @@ if @no_save
   logger('*** non-executable run ***')
 end
 
-unless @allowaddr.empty?
-  if @remove
+if @remove
+  unless @allowaddr.empty?
     @icewall.disallow(@allowaddr)
     logger('removed from whitelist: ', @allowaddr)
     @allowaddr = []
-  else
-    @icewall.allow(@allowaddr)
   end
-end
 
-unless @denyaddr.empty?
-  if @remove
+  unless @denyaddr.empty?
     @icewall.undeny(@denyaddr)
     @denyaddr = []
     logger('removed from blacklist: ', @denyaddr)
     @allowaddr = []
-  else
-    @icewall.deny(@denyaddr)
   end
 end
 
@@ -80,6 +81,8 @@ else
   end
 end
 
+@icewall.allow(@allowaddr)
+@icewall.deny(@denyaddr)
 @icewall.sort!
 
 logger('added to blacklist:', @denyaddr.uniq) unless @denyaddr.empty?

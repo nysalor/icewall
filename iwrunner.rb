@@ -1,8 +1,10 @@
 #!/usr/bin/ruby
 
+Version = "0.2"
+
 require 'optparse'
-require 'icewall'
 require 'yaml'
+require 'icewall'
 
 class Hash
   def symbolize(obj)
@@ -35,19 +37,19 @@ end
 
 opt = OptionParser.new
 
-opt.on('-d DENY_ADDRESSES') {|var| @denyaddr << var }
-opt.on('-a ALLOW_ADDRESSES') {|var| @allowaddr << var }
-opt.on('-b BLACKLIST') {|var| @blacklist_file = var }
-opt.on('-w WHITELST') {|var| @whitelist_file = var }
-opt.on('-m LOGFILE') {|var| @logfiles << var }
-opt.on('-p PATTERN') {|var| @pattern = var.sub(/^\//,'').sub(/\/$/,'') }
-opt.on('-c COUNT') {|var| @count = var.to_i if var.to_i > 0}
-opt.on('-f RECIPE_FILE') {|var| @recipe_file = var }
+opt.on('-d', '--deny=DENY_ADDRESSES', String, 'specify IP addresses to deny.') {|var| @denyaddr << var }
+opt.on('-a', '--allow=ALLOW_ADDRESSES', String, 'specify IP addresses to allow.') {|var| @allowaddr << var }
+opt.on('-b', '--blacklist=BLACKLIST', String, 'specify blacklist file. (default:/etc/deny.list)') {|var| @blacklist_file = var }
+opt.on('-w', '--whitelist=WHITELST', String, 'specify whitelist file. (default:/etc/allow.list)') {|var| @whitelist_file = var }
+opt.on('-l', '--logfile=LOGFILE', String, 'specify logfile to analyze.') {|var| @logfiles << var }
+opt.on('-p', '--pattern=PATTERN', String, 'specify pattern to find violation.') {|var| @pattern = var.sub(/^\//,'').sub(/\/$/,'') }
+opt.on('-c', '--count=COUNT', Integer, 'set violation threshold. (default:1)') {|var| @count = var.to_i if var.to_i > 0}
+opt.on('-f', '--file=RECIPE', String, 'set recipe file. (YAML format)') {|var| @recipe_file = var }
 
-opt.on('-r') { @remove = true }
-opt.on('-s') { @stdin = true }
-opt.on('-n') { @no_save = true }
-opt.on('-q') { @quiet = true }
+opt.on('-r', '--remove', 'remove addresses from black/white list.') { @remove = true }
+opt.on('-s', '--stdin', 'read log from STDIN.') { @stdin = true }
+opt.on('-n', '--non-executable', 'non-executable run. (do not save)') { @no_save = true }
+opt.on('-q', '--quiet', 'quiet mode.') { @quiet = true }
 
 opt.parse!(ARGV)
 

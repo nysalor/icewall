@@ -1,0 +1,27 @@
+= Icewall
+
+script for automatic deny access violation.
+UNIXのログを解析し、不正アクセスを試みたアドレスを自動的に拒否リストに追加します。
+
+== つかいかた
+
+icewall.rbをカレントディレクトリに置いて
+ruby iwrunner.rb
+
+*ヘルプを表示する
+ruby iwrunner.rb --help
+
+*オプション一覧
+    -d, --deny=DENY_ADDRESSES        拒否リストに加えるIPアドレスを指定します。
+    -a, --allow=ALLOW_ADDRESSES      許可リストに加えるIPアドレスを指定します。
+    -b, --blacklist=BLACKLIST        拒否リストのファイル名を指定します。(デフォルト:/etc/deny.list)
+    -w, --whitelist=WHITELST         許可リストのファイル名を指定します。(デフォルト:/etc/allow.list)
+    -l, --logfile=LOGFILE            解析対象のログファイル名を指定します。
+    -p, --pattern=PATTERN            不正アクセスと判定するパターンを指定します。正規表現が使えます。
+    -c, --count=COUNT                不正アクセスと判定する回数を指定します。この回数「以上」試行したIPアドレスが拒否リストに追加されます。(デフォルト:1回)
+    -f, --file=RECIPE                レシピファイルを指定します。同梱のrecipe.ymlを参考にして下さい。(YAML形式)
+    -r, --remove                     -dまたは-aと一緒に指定すると、IPアドレスを拒否または許可リストから削除します。
+    -s, --stdin                      標準入力からログファイルを読み込みます。
+    -n, --non-executable             シミュレーションモードで実行します。(ファイルはセーブされません)
+    --help                           ヘルプを表示します。
+    --version                        バージョンを表示します。

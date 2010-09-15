@@ -7,11 +7,23 @@ def logger(*args)
   puts(args.join(' ')) unless @quiet
 end
 
+def logparser(*logs)
+  logs.map{|log| log.split(/\n/)}.flatten.each do |line|
+    line.chomp!
+    if @regexp_line.match(line)
+      line.ip_scan.each do |addr|
+        @icewall.deny(addr)
+        @denyaddr << addr
+      end
+    end
+  end
+end
+
 # default path
 @blacklist_file = '/etc/deny.list'
 @whitelist_file = '/etc/allow.list'
 
-@pattern = 'ssh from \d+\.\d+\.\d+\.\d+ exceeded counts/min'
+@pattern = 'from \d+\.\d+\.\d+\.\d+ exceeded counts/min'
 
 @denyaddr = []
 @allowaddr = []
@@ -26,12 +38,14 @@ opt.on('-b BLACKLIST') {|var| @blacklist_file = var }
 opt.on('-w WHITELST') {|var| @whitelist_file = var }
 opt.on('-m LOGFILE') {|var| @logfiles << var }
 opt.on('-p PATTERN') {|var| @pattern = var.sub(/^\//,'').sub(/\/$/,'') }
+opt.on('-s') { @stdin = true }
 opt.on('-n') { @no_save = true }
 opt.on('-q') { @quiet = true }
 
 opt.parse!(ARGV)
 
 @icewall = Icewall.new(:blacklist => @blacklist_file, :whitelist => @whitelist_file)
+@regexp_line = Regexp.new(@pattern)
 
 if @no_save
   logger('*** non-executable run ***')
@@ -58,19 +72,12 @@ unless @denyaddr.empty?
   end
 end
 
-@logfiles.each do |logfile|
-  log = File.open(logfile)
-  regexp_line = Regexp.new(@pattern)
-  log.each do |line|
-    line.chomp!
-    if regexp_line.match(line)
-      line.ip_scan.each do |addr|
-        @icewall.deny(addr)
-        @denyaddr << addr
-      end
-    end
+if @logfiles.empty? && @stdin
+  logparser(ARGF.read)
+else
+  @logfiles.each do |logfile|
+    logparser(File.open(logfile).read)
   end
-  log.close
 end
 
 @icewall.sort!

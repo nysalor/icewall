@@ -112,3 +112,12 @@ describe Array, "配列に複数のIPアドレスを含む要素がある場合"
     @addresses.ip_select.should == ["1.1.1.1","2.2.2.2"]
   end
 end
+describe String, "文字列がIPアドレスを含む場合" do
+    before(:each) do
+    @address = "access from 192.168.0.1 at sunday."
+  end
+
+  it "IPアドレスを抜き出せること" do
+    @address.ip_scan.should == ["192.168.0.1"]
+  end
+end

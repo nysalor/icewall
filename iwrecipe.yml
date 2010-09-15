@@ -1,0 +1,15 @@
+blacklist: '/usr/local/etc/deny.list'
+whitelist: '/usr/local/etc/allow.list'
+
+recipe:
+  illegal_user_access:
+    pattern: 'PAM: authentication error for illegal user'
+    count: 5
+
+  root_access:
+    pattern: 'PAM: authentication error for root'
+    count: 2
+
+  exceeded_count:
+    pattern: 'from.* exceeded counts/min'
+    count: 1

@@ -2,29 +2,27 @@
 
 require 'optparse'
 require 'icewall'
+require 'yaml'
+
+class Hash
+  def symbolize(obj)
+    self.each do |key, value|
+      if value.is_a?(Hash)
+        value_obj = Hash.new
+        value.symbolize(value_obj)
+        obj[key.to_sym] = value_obj
+      else
+        obj[key.to_sym] = value
+      end
+    end
+  end
+end
 
 def logger(*args)
   puts(args.join(' ')) unless @quiet
 end
 
-def logparser(*logs)
-  @addresses = Hash.new(0)
-  logs.map{|log| log.split(/\n/)}.flatten.each do |line|
-    line.chomp!
-    if @regexp_line.match(line)
-      line.ip_scan.each do |addr|
-        @addresses[addr] += 1
-      end
-    end
-  end
-  @addresses.each do |addr, num|
-    if num >= @count
-      @denyaddr << addr
-    end
-  end
-end
-
-# default path
+# Default path
 @blacklist_file = '/etc/deny.list'
 @whitelist_file = '/etc/allow.list'
 
@@ -44,6 +42,8 @@ opt.on('-w WHITELST') {|var| @whitelist_file = var }
 opt.on('-m LOGFILE') {|var| @logfiles << var }
 opt.on('-p PATTERN') {|var| @pattern = var.sub(/^\//,'').sub(/\/$/,'') }
 opt.on('-c COUNT') {|var| @count = var.to_i if var.to_i > 0}
+opt.on('-f RECIPE_FILE') {|var| @recipe_file = var }
+
 opt.on('-r') { @remove = true }
 opt.on('-s') { @stdin = true }
 opt.on('-n') { @no_save = true }
@@ -52,7 +52,6 @@ opt.on('-q') { @quiet = true }
 opt.parse!(ARGV)
 
 @icewall = Icewall.new(:blacklist => @blacklist_file, :whitelist => @whitelist_file)
-@regexp_line = Regexp.new(@pattern)
 
 if @no_save
   logger('*** non-executable run ***')
@@ -62,23 +61,59 @@ if @remove
   unless @allowaddr.empty?
     @icewall.disallow(@allowaddr)
     logger('removed from whitelist: ', @allowaddr)
-    @allowaddr = []
+    @allowaddr.clear
   end
 
   unless @denyaddr.empty?
     @icewall.undeny(@denyaddr)
-    @denyaddr = []
     logger('removed from blacklist: ', @denyaddr)
-    @allowaddr = []
+    @denyaddr.clear
   end
 end
 
-if @logfiles.empty? && @stdin
-  logparser(ARGF.read)
-else
-  @logfiles.each do |logfile|
-    logparser(File.open(logfile).read)
+@recipe = {}
+if @recipe_file
+  File.open(@recipe_file) do |io|
+    YAML.load_documents(io) {|y| y.symbolize(@recipe) }
   end
+  @blacklist_file = (@recipe[:blacklist] || @blacklist_file)
+  @whitelist_file = (@recipe[:whitelist] || @whitelist_file)
+else
+  @recipe[:recipe] = {
+    :default => {
+      :pattern => @pattern,
+      :count => @count,
+    }
+  }
+end
+
+if @logfiles.flatten.empty? && @stdin
+  @log = ARGF.read
+else
+  @log = @logfiles.flatten.map{|logfile| File.open(logfile).read}.join
+end
+
+@recipe[:recipe].each do |name, params|
+  logger("processing #{name}...")
+
+  addresses = Hash.new(0)
+  regexp = Regexp.new(params[:pattern])
+  @log.each do |line|
+    line.chomp!
+    if regexp.match(line)
+      line.ip_scan.each do |addr|
+        addresses[addr] += 1
+      end
+    end
+  end
+  deny = []
+  addresses.each do |addr, num|
+    if num >= params[:count]
+      logger("#{addr} violated #{num} times.")
+      deny << addr
+    end
+  end
+  @denyaddr = @denyaddr | deny
 end
 
 @icewall.allow(@allowaddr)

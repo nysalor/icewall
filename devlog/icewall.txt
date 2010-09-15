@@ -16,3 +16,5 @@ WLに入っているか？
 @blacklist.empty?
 deny.listを読み込む
 ソートして上書き
+
+いつ起動する？

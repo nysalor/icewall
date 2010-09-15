@@ -1,6 +1,5 @@
 = Icewall
 
-script for automatic deny access violation.
 UNIXのログを解析し、不正アクセスを試みたアドレスを自動的に拒否リストに追加します。
 
 == つかいかた
